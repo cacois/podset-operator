@@ -3,6 +3,7 @@ package podset
 import (
 	"context"
 	"reflect"
+	"time"
 
 	appv1alpha1 "podset-operator/pkg/apis/app/v1alpha1"
 
@@ -27,6 +28,24 @@ var log = logf.Log.WithName("controller_podset")
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*
  */
+
+func contains(arr []string, str string) bool {
+	for _, a := range arr {
+		if a == str {
+			return true
+		}
+	}
+	return false
+}
+
+func remove(arr []string, str string) bool {
+	for _, a := range arr {
+		if a == str {
+			return true
+		}
+	}
+	return false
+}
 
 // Add creates a new PodSet Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -88,6 +107,8 @@ func (r *ReconcilePodSet) Reconcile(request reconcile.Request) (reconcile.Result
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling PodSet")
 
+	finalizer := "check-delete"
+
 	// Fetch the PodSet instance
 	podSet := &appv1alpha1.PodSet{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, podSet)
@@ -100,6 +121,26 @@ func (r *ReconcilePodSet) Reconcile(request reconcile.Request) (reconcile.Result
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
+	}
+
+	// check for deletion
+	if podSet.GetDeletionTimestamp() != nil {
+		reqLogger.Info("DELETING")
+		if contains(podSet.GetFinalizers(), finalizer) {
+
+			// wait 3 seconds before deleting
+			reqLogger.Info("Performing delete operations, this will take 10 seconds...")
+			time.Sleep(10 * time.Second)
+
+			// remove finalizers to let k8s continue deleting
+			reqLogger.Info("Removing finalizers...")
+			podSet.SetFinalizers([]string{})
+			err := r.client.Update(context.TODO(), podSet)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		return reconcile.Result{}, nil
 	}
 
 	/* List all pods owned by this PodSet instance */

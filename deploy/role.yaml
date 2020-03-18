@@ -70,6 +70,7 @@ rules:
   - app.example.com
   resources:
   - '*'
+  - podsets
   verbs:
   - create
   - delete
