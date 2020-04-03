@@ -16,6 +16,7 @@ type PodSetSpec struct {
 type PodSetStatus struct {
 	Replicas int32    `json:"replicas"`
 	PodNames []string `json:"podNames"`
+	Updated  string   `json:"updated"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

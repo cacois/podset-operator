@@ -2,7 +2,6 @@ package podset
 
 import (
 	"context"
-	"reflect"
 	"time"
 
 	appv1alpha1 "podset-operator/pkg/apis/app/v1alpha1"
@@ -180,21 +179,15 @@ func (r *ReconcilePodSet) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 
 	reqLogger.Info("Checking podset", "expected replicas", podSet.Spec.Replicas, "Found Pod.Names", existingPodNames)
-	// Create a new status object based on observed status
-	status := appv1alpha1.PodSetStatus{
-		Replicas: int32(len(existingPodNames)),
-		PodNames: existingPodNames,
-	}
 
-	// compare observed status to current recorded podset status. If
-	// different, update recorded status to observed status
-	if !reflect.DeepEqual(podSet.Status, status) {
-		podSet.Status = status
-		err := r.client.Status().Update(context.TODO(), podSet)
-		if err != nil {
-			reqLogger.Error(err, "failed to update the podSet")
-			return reconcile.Result{}, err
-		}
+	podSet.Status.PodNames = existingPodNames
+	// NOTE: the 'Updated' timestamp will change each time reconcile() is called
+	// If status is not treated correctly as a subresource
+	podSet.Status.Updated = time.Now().String()
+	err = r.client.Status().Update(context.TODO(), podSet)
+	if err != nil {
+		reqLogger.Error(err, "failed to update the podSet")
+		return reconcile.Result{}, err
 	}
 
 	// If there are more pods than desired, scale down pods
